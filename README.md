@@ -1,2 +1,3 @@
-# concurrent-async
-make async run  concurrently by limit
+# concurrent-runner
+run async function concurrently by concurrency and priority
+
