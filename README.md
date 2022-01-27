@@ -2,7 +2,7 @@
 
 [![NPM version](https://badge.fury.io/js/concurrent-runner.png)](http://badge.fury.io/js/concurrent-runner)
 [![NPM downloads](http://img.shields.io/npm/dm/concurrent-runner.svg)](https://npmjs.org/package/concurrent-runner)
-[![Build Status](https://app.travis-ci.com/yiminghe/concurrent-runner.svg?branch=master)](https://app.travis-ci.com/github/yiminghe/concurrent-runner)
+[![Build Status](https://app.travis-ci.com/yiminghe/concurrent-runner.svg?branch=main)](https://app.travis-ci.com/github/yiminghe/concurrent-runner)
 
 run async function concurrently by concurrency and priority using heap
 
