@@ -1,33 +1,21 @@
 
+import { Task, TaskMeta, RunnerOptions, CancelablePromise, ExtractTaskResult } from "./types";
+import { noop, heapify, insertHeap, ConcurrentRunnerAbortError } from './utils';
 
-interface Task<T = any> {
-  run: () => Promise<T>;
-}
+export * from './types';
 
-interface TaskMeta {
-  task: Task;
-  cancel: boolean;
-  resolve: Function;
-  reject: Function;
-}
-type Comparator = (t1: Task, t2: Task) => -1 | 0 | 1;
-
-type CancelablePromise<T> = Promise<T> & { cancel: () => void };
-
-function noop() { }
-
-class CoRunner {
-  private heap: TaskMeta[] = [];
-  private running: Set<TaskMeta> = new Set();
+export default class CocurrentRunner<T extends Task> {
+  private heap: TaskMeta<T>[] = [];
+  private running: number = 0;
   private started = false;
   private paused = false;
 
-  constructor(private concurrency: number, private comparator: Comparator) {
+  constructor(private options: RunnerOptions<T>) {
 
   }
 
-  public setConcurrency(concurrency: number) {
-    this.concurrency = concurrency;
+  setOptions(options: Partial<RunnerOptions<T>>) {
+    Object.assign(this.options, options);
   }
 
   public start() {
@@ -42,12 +30,6 @@ class CoRunner {
     this.paused = true;
   }
 
-  public cancelAllRunning() {
-    for (const t of Array.from(this.running)) {
-      t.cancel = true;
-    }
-  }
-
   public resume() {
     this.paused = false;
     this.checkAndSchedule();
@@ -58,8 +40,8 @@ class CoRunner {
     this.heap = [];
   }
 
-  private endAndSchedule(taskMeta: TaskMeta) {
-    this.running.delete(taskMeta);
+  private endAndSchedule() {
+    this.running--;
     this.checkAndSchedule();
   }
 
@@ -67,52 +49,89 @@ class CoRunner {
     if (this.paused) {
       return;
     }
-    while (this.running.size < this.concurrency && this.heap.length) {
+    const {
+      concurrency,
+      comparator,
+      onEmpty = noop,
+      onTaskStart = noop,
+      onTaskEnd = noop,
+    } = this.options;
+   
+    while (this.running < concurrency && this.heap.length) {
       const heap = this.heap;
       const taskMeta = heap.shift()!;
       if (heap.length > 1) {
         const lastTask = heap.pop()!;
         heap.unshift(lastTask);
-        heapify(heap, 0, heap.length, this.comparator);
+        heapify(heap, 0, heap.length, comparator);
       }
-      if (taskMeta.cancel) {
+      if (taskMeta.canceled) {
         continue;
       }
-      this.running.add(taskMeta);
-      taskMeta.task.run().then((ret) => {
-        this.endAndSchedule(taskMeta);
-        if (!taskMeta.cancel) {
-          taskMeta.resolve(ret);
+      this.running++;
+      onTaskStart({ task: taskMeta.task });
+      taskMeta.start = true;
+      const { promise, cancel } = taskMeta.task.run();
+      taskMeta.cancel = cancel;
+      promise.then((result) => {
+        taskMeta.end = true;
+        if (!taskMeta.canceled) {
+          taskMeta.resolve(result);
+          onTaskEnd({ task: taskMeta.task, result });
+          this.endAndSchedule();
         }
-      }, (ret) => {
-        this.endAndSchedule(taskMeta);
-        if (!taskMeta.cancel) {
-          taskMeta.reject(ret);
+      }, (result) => {
+        taskMeta.end = true;
+        if (!taskMeta.canceled) {
+          taskMeta.reject(result);
+          onTaskEnd({ task: taskMeta.task, result });
+          this.endAndSchedule();
         }
       });
     }
+
+    if (this.running === 0 && this.heap.length === 0) {
+      return setTimeout(()=>{
+        if (this.running === 0 && this.heap.length === 0) {
+          onEmpty();
+        }
+      },0);
+    }
   }
 
-  public addTask<T>(task: Task<T>): CancelablePromise<T> {
-    const taskMeta: TaskMeta = {
+  public addTask<TT extends T, R = ExtractTaskResult<TT>>(task: TT): CancelablePromise<R> {
+    const taskMeta: TaskMeta<TT> = {
       task,
-      cancel: false,
+      start: false,
+      canceled: false,
       reject: noop,
       resolve: noop,
+      end: false,
     }
-    const { heap } = this;
+    const { heap, options: { comparator, onTaskEnd = noop } } = this;
 
-    const promise: CancelablePromise<T> = new Promise<T>((resolve, reject) => {
+    const promise: CancelablePromise<R> = new Promise<R>((resolve, reject) => {
       taskMeta.reject = reject;
       taskMeta.resolve = resolve;
-      insertHeap(heap, heap.length, taskMeta, this.comparator);
+      insertHeap<T>(heap, heap.length, taskMeta, comparator);
       if (this.started) {
         this.checkAndSchedule();
       }
-    }) as CancelablePromise<T>;
+    }) as CancelablePromise<R>;
 
     promise.cancel = () => {
-      taskMeta.cancel = true;
+      taskMeta.canceled = true;
+      if (!taskMeta.end) {
+        taskMeta.end = true;
+        taskMeta.reject(new ConcurrentRunnerAbortError(task));
+        if (taskMeta.cancel) {
+          taskMeta.cancel();
+        }
+        if(taskMeta.start){
+          onTaskEnd({ task, result: new ConcurrentRunnerAbortError(task) });
+          this.endAndSchedule();
+        }
+      }
     };
 
     return promise;
@@ -120,35 +139,3 @@ class CoRunner {
 }
 
 
-function insertHeap(heap: TaskMeta[], index: number, value: TaskMeta, comparator: Comparator) {
-  heap[index] = value;
-  while (index) {
-    const parent = ((index - 1) / 2) | 0;
-    if (comparator(heap[parent].task, heap[index].task) > 0) {
-      swap(heap, index, parent);
-      index = parent;
-    } else {
-      break;
-    }
-  }
-}
-
-function heapify(heap: TaskMeta[], i: number, size: number, comparator: Comparator) {
-  const leftIndex = 2 * i + 1;
-  const rightIndex = leftIndex + 1;
-  let smallestIndex = i;
-  if (leftIndex < size && comparator(heap[leftIndex].task, heap[smallestIndex].task) < 0) {
-    smallestIndex = leftIndex;
-  }
-  if (rightIndex < size && comparator(heap[rightIndex].task, heap[smallestIndex].task) < 0) {
-    smallestIndex = rightIndex;
-  }
-  if (smallestIndex !== i) {
-    swap(heap, smallestIndex, i);
-    heapify(heap, smallestIndex, size, comparator);
-  }
-}
-
-function swap(heap: TaskMeta[], i: number, j: number) {
-  [heap[i], heap[j]] = [heap[j], heap[i]];
-}

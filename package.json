@@ -1,9 +1,15 @@
 {
   "name": "concurrent-runner",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "files": [
     "lib",
     "es"
+  ],
+  "keywords": [
+    "concurrent",
+    "promise",
+    "async",
+    "runner"
   ],
   "repository": {
     "type": "git",
@@ -19,14 +25,16 @@
   "main": "lib/index.js",
   "devDependencies": {
     "@types/jest": "^26.0.15",
+    "@types/prettier": "^2",
     "jest": "^26.6.3",
+    "prettier": "^2.5.1",
     "typescript": "^4.0.5"
   },
   "packageManager": "yarn@3.1.1",
   "scripts": {
     "pub": "yarn build && npm publish && git push",
-    "clean": "rm -rf lib es",
+    "clean": "rm -rf lib && rm -rf es",
     "build": "yarn clean && tsc --build tsconfig.build.json && tsc --build tsconfig.cjs.build.json",
-    "test": "yarn clean && tsc && jest"
+    "test": "tsc && jest --roots lib"
   }
 }

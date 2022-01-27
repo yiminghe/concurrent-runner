@@ -1,66 +1,4 @@
-# concurrent-runner
-
-[![NPM version](https://badge.fury.io/js/concurrent-runner.png)](http://badge.fury.io/js/concurrent-runner)
-[![NPM downloads](http://img.shields.io/npm/dm/concurrent-runner.svg)](https://npmjs.org/package/concurrent-runner)
-[![Build Status](https://app.travis-ci.com/yiminghe/concurrent-runner.svg?branch=master)](https://app.travis-ci.com/github/yiminghe/concurrent-runner)
-
-run async function concurrently by concurrency and priority using heap
-
-
-## API
-
-```ts
-export interface Task<T = any> {
-    run: () => {
-        promise: Promise<T>;
-        cancel?: Function;
-    };
-}
-
-export declare type ExtractTaskResult<T> = T extends Task<infer U> ? U : never;
-
-// -1 means higher priority
-export declare type Comparator<T extends Task = Task> = (t1: T, t2: T) => -1 | 0 | 1;
-
-export declare type CancelablePromise<T> = Promise<T> & {
-    cancel: () => void;
-};
-
-export interface RunnerOptions<T extends Task = Task> {
-    concurrency: number;
-    comparator: Comparator<T>;
-    onEmpty?: () => void;
-    onTaskStart?: (o: {
-        task: T;
-    }) => void;
-    onTaskEnd?: (o: {
-        task: T;
-        result: any;
-    }) => void;
-}
-
-export default class CocurrentRunner<T extends Task> {
-    private options;
-    private heap;
-    private running;
-    private started;
-    private paused;
-    constructor(options: RunnerOptions<T>);
-    setOptions(options: Partial<RunnerOptions<T>>): void;
-    start(): void;
-    pause(): void;
-    resume(): void;
-    stop(): void;
-    private endAndSchedule;
-    private checkAndSchedule;
-    addTask<TT extends T, R = ExtractTaskResult<TT>>(task: TT): CancelablePromise<R>;
-}
-```
-
-## Usage
-
-```ts
-import CoRunner, { Task } from 'concurrent-runner';
+import CoRunner, { Task } from '../index';
 
 interface TimeTask<U = any> extends Task<U> {
   time: number;
@@ -183,5 +121,3 @@ describe('concurrent runner', () => {
     r.start();
   });
 });
-
-```

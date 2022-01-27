@@ -758,7 +758,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/prettier@npm:^2.0.0":
+"@types/prettier@npm:^2, @types/prettier@npm:^2.0.0":
   version: 2.4.3
   resolution: "@types/prettier@npm:2.4.3::__archiveUrl=https%3A%2F%2Fregistry.npmmirror.com%2F%40types%2Fprettier%2Fdownload%2F%40types%2Fprettier-2.4.3.tgz"
   checksum: b240434daabac54700c862b0bb52a83fec396e0e9c847447119ba41fd8404d79aadfa174e6306fb094b29efadac586344b7606c3a71c286b71755ab2579d54df
@@ -1424,7 +1424,9 @@ __metadata:
   resolution: "concurrent-runner@workspace:."
   dependencies:
     "@types/jest": ^26.0.15
+    "@types/prettier": ^2
     jest: ^26.6.3
+    prettier: ^2.5.1
     typescript: ^4.0.5
   languageName: unknown
   linkType: soft
@@ -3848,6 +3850,15 @@ __metadata:
   version: 1.1.2
   resolution: "prelude-ls@npm:1.1.2::__archiveUrl=https%3A%2F%2Fregistry.npmmirror.com%2Fprelude-ls%2Fdownload%2Fprelude-ls-1.1.2.tgz"
   checksum: c4867c87488e4a0c233e158e4d0d5565b609b105d75e4c05dc760840475f06b731332eb93cc8c9cecb840aa8ec323ca3c9a56ad7820ad2e63f0261dadcb154e4
+  languageName: node
+  linkType: hard
+
+"prettier@npm:^2.5.1":
+  version: 2.5.1
+  resolution: "prettier@npm:2.5.1::__archiveUrl=https%3A%2F%2Fregistry.npmmirror.com%2Fprettier%2Fdownload%2Fprettier-2.5.1.tgz"
+  bin:
+    prettier: bin-prettier.js
+  checksum: 21b9408476ea1c544b0e45d51ceb94a84789ff92095abb710942d780c862d0daebdb29972d47f6b4d0f7ebbfb0ffbf56cc2cfa3e3e9d1cca54864af185b15b66
   languageName: node
   linkType: hard
 
