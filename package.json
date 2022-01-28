@@ -25,14 +25,19 @@
   "module": "es/index.js",
   "main": "lib/index.js",
   "devDependencies": {
-    "@types/jest": "^26.0.15",
-    "@types/prettier": "^2",
-    "jest": "^26.6.3",
-    "prettier": "^2.5.1",
-    "typescript": "^4.0.5"
+    "@types/jest": "27.x",
+    "jest": "27.x",
+    "prettier": "2.x",
+    "typescript": "4.x"
+  },
+  "jest": {
+    "testMatch": [
+      "**/*.test.[j|t]s?(x)"
+    ]
   },
   "packageManager": "yarn@3.1.1",
   "scripts": {
+    "prettier": "prettier --write \"src/**/*.{js,tsx,ts,jsx}\"",
     "pub": "yarn build && npm publish && git push",
     "clean": "rm -rf lib && rm -rf es",
     "build": "yarn clean && tsc --build tsconfig.build.json && tsc --build tsconfig.cjs.build.json",

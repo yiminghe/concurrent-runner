@@ -1,8 +1,13 @@
+import {
+  Task,
+  TaskMeta,
+  RunnerOptions,
+  CancelablePromise,
+  ExtractTaskResult,
+} from "./types";
+import { noop, heapify, insertHeap, ConcurrentRunnerAbortError } from "./utils";
 
-import { Task, TaskMeta, RunnerOptions, CancelablePromise, ExtractTaskResult } from "./types";
-import { noop, heapify, insertHeap, ConcurrentRunnerAbortError } from './utils';
-
-export * from './types';
+export * from "./types";
 
 export default class CocurrentRunner<T extends Task> {
   private heap: TaskMeta<T>[] = [];
@@ -10,9 +15,7 @@ export default class CocurrentRunner<T extends Task> {
   private started = false;
   private paused = false;
 
-  constructor(private options: RunnerOptions<T>) {
-
-  }
+  constructor(private options: RunnerOptions<T>) {}
 
   setOptions(options: Partial<RunnerOptions<T>>) {
     Object.assign(this.options, options);
@@ -56,14 +59,16 @@ export default class CocurrentRunner<T extends Task> {
       onTaskStart = noop,
       onTaskEnd = noop,
     } = this.options;
-   
+
     while (this.running < concurrency && this.heap.length) {
       const heap = this.heap;
-      const taskMeta = heap.shift()!;
-      if (heap.length > 1) {
+      const taskMeta = heap[0]!;
+      if (heap.length > 2) {
         const lastTask = heap.pop()!;
-        heap.unshift(lastTask);
+        heap[0] = lastTask;
         heapify(heap, 0, heap.length, comparator);
+      } else {
+        heap.shift();
       }
       if (taskMeta.canceled) {
         continue;
@@ -73,33 +78,38 @@ export default class CocurrentRunner<T extends Task> {
       taskMeta.start = true;
       const { promise, cancel } = taskMeta.task.run();
       taskMeta.cancel = cancel;
-      promise.then((result) => {
-        taskMeta.end = true;
-        if (!taskMeta.canceled) {
-          taskMeta.resolve(result);
-          onTaskEnd({ task: taskMeta.task, result });
-          this.endAndSchedule();
+      promise.then(
+        (result) => {
+          taskMeta.end = true;
+          if (!taskMeta.canceled) {
+            taskMeta.resolve(result);
+            onTaskEnd({ task: taskMeta.task, result });
+            this.endAndSchedule();
+          }
+        },
+        (result) => {
+          taskMeta.end = true;
+          if (!taskMeta.canceled) {
+            taskMeta.reject(result);
+            onTaskEnd({ task: taskMeta.task, result });
+            this.endAndSchedule();
+          }
         }
-      }, (result) => {
-        taskMeta.end = true;
-        if (!taskMeta.canceled) {
-          taskMeta.reject(result);
-          onTaskEnd({ task: taskMeta.task, result });
-          this.endAndSchedule();
-        }
-      });
+      );
     }
 
     if (this.running === 0 && this.heap.length === 0) {
-      return setTimeout(()=>{
+      return setTimeout(() => {
         if (this.running === 0 && this.heap.length === 0) {
           onEmpty();
         }
-      },0);
+      }, 0);
     }
   }
 
-  public addTask<TT extends T, R = ExtractTaskResult<TT>>(task: TT): CancelablePromise<R> {
+  public addTask<TT extends T, R = ExtractTaskResult<TT>>(
+    task: TT
+  ): CancelablePromise<R> {
     const taskMeta: TaskMeta<TT> = {
       task,
       start: false,
@@ -107,8 +117,11 @@ export default class CocurrentRunner<T extends Task> {
       reject: noop,
       resolve: noop,
       end: false,
-    }
-    const { heap, options: { comparator, onTaskEnd = noop } } = this;
+    };
+    const {
+      heap,
+      options: { comparator, onTaskEnd = noop },
+    } = this;
 
     const promise: CancelablePromise<R> = new Promise<R>((resolve, reject) => {
       taskMeta.reject = reject;
@@ -127,7 +140,7 @@ export default class CocurrentRunner<T extends Task> {
         if (taskMeta.cancel) {
           taskMeta.cancel();
         }
-        if(taskMeta.start){
+        if (taskMeta.start) {
           onTaskEnd({ task, result: new ConcurrentRunnerAbortError(task) });
           this.endAndSchedule();
         }
@@ -137,5 +150,3 @@ export default class CocurrentRunner<T extends Task> {
     return promise;
   }
 }
-
-
