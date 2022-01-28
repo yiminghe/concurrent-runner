@@ -7,6 +7,9 @@ notifications:
 node_js:
   - 16.13.1
 
+install:
+  - yarn
+  
 before_install:
   - corepack enable
 
