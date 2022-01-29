@@ -3,9 +3,9 @@ import { Task, TaskMeta, Comparator } from "./types";
 export function noop() {}
 
 export class ConcurrentRunnerAbortError extends Error {
+  name = "ConcurrentRunnerAbortError";
   constructor(public task: Task) {
     super("ConcurrentRunnerAbortError");
-    this.name = "ConcurrentRunnerAbortError";
   }
 }
 export function insertHeap<T extends Task>(
