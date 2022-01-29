@@ -40,19 +40,12 @@ export interface RunnerOptions<T extends Task = Task> {
 }
 
 export default class CocurrentRunner<T extends Task> {
-    private options;
-    private heap;
-    private running;
-    private started;
-    private paused;
     constructor(options: RunnerOptions<T>);
     setOptions(options: Partial<RunnerOptions<T>>): void;
     start(): void;
     pause(): void;
     resume(): void;
     stop(): void;
-    private endAndSchedule;
-    private checkAndSchedule;
     addTask<TT extends T, R = ExtractTaskResult<TT>>(task: TT): CancelablePromise<R>;
 }
 ```
