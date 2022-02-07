@@ -1,6 +1,6 @@
 import { Task, TaskMeta, Comparator } from "./types";
 
-export function noop() {}
+export function noop() { }
 
 export class ConcurrentRunnerAbortError extends Error {
   name = "ConcurrentRunnerAbortError";
@@ -8,7 +8,7 @@ export class ConcurrentRunnerAbortError extends Error {
     super("ConcurrentRunnerAbortError");
   }
 }
-export function insertHeap<T extends Task>(
+export function heapInsert<T extends Task>(
   heap: TaskMeta<T>[],
   index: number,
   value: TaskMeta<T>,
@@ -32,24 +32,28 @@ export function heapify<T extends Task>(
   size: number,
   comparator: Comparator<T>
 ) {
-  const leftIndex = 2 * i + 1;
-  const rightIndex = leftIndex + 1;
-  let smallestIndex = i;
-  if (
-    leftIndex < size &&
-    comparator(heap[leftIndex].task, heap[smallestIndex].task) < 0
-  ) {
-    smallestIndex = leftIndex;
-  }
-  if (
-    rightIndex < size &&
-    comparator(heap[rightIndex].task, heap[smallestIndex].task) < 0
-  ) {
-    smallestIndex = rightIndex;
-  }
-  if (smallestIndex !== i) {
-    swap(heap, smallestIndex, i);
-    heapify(heap, smallestIndex, size, comparator);
+  while (1) {
+    const leftIndex = 2 * i + 1;
+    const rightIndex = leftIndex + 1;
+    let smallestIndex = i;
+    if (
+      leftIndex < size &&
+      comparator(heap[leftIndex].task, heap[smallestIndex].task) < 0
+    ) {
+      smallestIndex = leftIndex;
+    }
+    if (
+      rightIndex < size &&
+      comparator(heap[rightIndex].task, heap[smallestIndex].task) < 0
+    ) {
+      smallestIndex = rightIndex;
+    }
+    if (smallestIndex !== i) {
+      swap(heap, smallestIndex, i);
+      i = smallestIndex;
+    } else {
+      break;
+    }
   }
 }
 

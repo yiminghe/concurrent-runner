@@ -5,7 +5,7 @@ import {
   CancelablePromise,
   ExtractTaskResult,
 } from "./types";
-import { noop, heapify, insertHeap, ConcurrentRunnerAbortError } from "./utils";
+import { noop, heapify, heapInsert, ConcurrentRunnerAbortError } from "./utils";
 
 export * from "./types";
 
@@ -126,7 +126,7 @@ export default class CocurrentRunner<T extends Task> {
     const promise: CancelablePromise<R> = new Promise<R>((resolve, reject) => {
       taskMeta.reject = reject;
       taskMeta.resolve = resolve;
-      insertHeap<T>(heap, heap.length, taskMeta, comparator);
+      heapInsert<T>(heap, heap.length, taskMeta, comparator);
       if (this.started) {
         this.checkAndSchedule();
       }
