@@ -29,7 +29,7 @@ describe("concurrent runner", () => {
   function getRunnerWithTasks() {
     const r = getRunner();
     const ret: number[][] = [];
-    const promises = [];
+    const taskHandles = [];
     const times = [300, 100, 500, 100];
     for (let time = 0; time < times.length; time++) {
       const p = r.addTask({
@@ -40,8 +40,8 @@ describe("concurrent runner", () => {
         },
         time,
       });
-      promises.push(p);
-      p.then(
+      taskHandles.push(p);
+      p.promise.then(
         (r) => {
           ret.push([time, r]);
         },
@@ -50,7 +50,7 @@ describe("concurrent runner", () => {
         }
       );
     }
-    return { r, ret, promises };
+    return { r, ret, taskHandles };
   }
 
   it("works for concurrency", (done) => {
@@ -76,12 +76,12 @@ describe("concurrent runner", () => {
   });
 
   it("can cancel running", (done) => {
-    const { r, ret, promises } = getRunnerWithTasks();
+    const { r, ret, taskHandles } = getRunnerWithTasks();
     const startTime: number[][] = [];
     const start = Date.now();
 
     setTimeout(() => {
-      promises[2].cancel();
+      taskHandles[2].cancel();
     }, 200);
 
     r.setOptions({
@@ -102,12 +102,12 @@ describe("concurrent runner", () => {
   });
 
   it("can cancel waiting", (done) => {
-    const { r, ret, promises } = getRunnerWithTasks();
+    const { r, ret, taskHandles } = getRunnerWithTasks();
     const startTime: number[][] = [];
     const start = Date.now();
 
     setTimeout(() => {
-      promises[3].cancel();
+      taskHandles[3].cancel();
     }, 200);
 
     r.setOptions({
@@ -126,9 +126,9 @@ describe("concurrent runner", () => {
     r.start();
   });
 
-  function runWithCancel(fn: (...args: any) => Generator, ...args: any[]): { promise: Promise<any>; cancel: Function } {
+  function runWithCancel(fn: (...args: any) => Generator, ...args: any[]): { promise: Promise<any>; cancel: () => void; } {
     const gen = fn(...args);
-    let cancelled: boolean, cancel: Function = function () { };
+    let cancelled: boolean, cancel: () => void = function () { };
     const promise = new Promise((resolve, reject) => {
       cancel = () => {
         cancelled = true;
@@ -188,7 +188,7 @@ describe("concurrent runner", () => {
       },
       time: 1,
     });
-    p.then(
+    p.promise.then(
       (r) => {
         ret.push(r);
       },

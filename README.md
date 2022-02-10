@@ -13,16 +13,17 @@ run cancelable async function concurrently by concurrency and priority using hea
 export interface Task<T = any> {
     run: () => {
         promise: Promise<T>;
-        cancel?: Function;
+        cancel?: () => void;
     };
 }
 
-export declare type ExtractTaskResult<T> = T extends Task<infer U> ? U : never;
+export type ExtractTaskResult<T> = T extends Task<infer U> ? U : never;
 
 // -1 means higher priority
-export declare type Comparator<T extends Task = Task> = (t1: T, t2: T) => -1 | 0 | 1;
+export type Comparator<T extends Task = Task> = (t1: T, t2: T) => -1 | 0 | 1;
 
-export declare type CancelablePromise<T> = Promise<T> & {
+export type TaskHandle<T> = {
+    promise: Promise<T>;
     cancel: () => void;
 };
 
@@ -40,13 +41,20 @@ export interface RunnerOptions<T extends Task = Task> {
 }
 
 export default class CocurrentRunner<T extends Task> {
+    private options;
+    private heap;
+    private running;
+    private started;
+    private paused;
     constructor(options: RunnerOptions<T>);
     setOptions(options: Partial<RunnerOptions<T>>): void;
     start(): void;
     pause(): void;
     resume(): void;
     stop(): void;
-    addTask<TT extends T, R = ExtractTaskResult<TT>>(task: TT): CancelablePromise<R>;
+    private endAndSchedule;
+    private checkAndSchedule;
+    addTask<TT extends T, R = ExtractTaskResult<TT>>(task: TT): TaskHandle<R>;
 }
 ```
 
@@ -84,7 +92,7 @@ describe("concurrent runner", () => {
   function getRunnerWithTasks() {
     const r = getRunner();
     const ret: number[][] = [];
-    const promises = [];
+    const taskHandles = [];
     const times = [300, 100, 500, 100];
     for (let time = 0; time < times.length; time++) {
       const p = r.addTask({
@@ -95,8 +103,8 @@ describe("concurrent runner", () => {
         },
         time,
       });
-      promises.push(p);
-      p.then(
+      taskHandles.push(p);
+      p.promise.then(
         (r) => {
           ret.push([time, r]);
         },
@@ -105,7 +113,7 @@ describe("concurrent runner", () => {
         }
       );
     }
-    return { r, ret, promises };
+    return { r, ret, taskHandles };
   }
 
   it("works for concurrency", (done) => {
@@ -131,12 +139,12 @@ describe("concurrent runner", () => {
   });
 
   it("can cancel running", (done) => {
-    const { r, ret, promises } = getRunnerWithTasks();
+    const { r, ret, taskHandles } = getRunnerWithTasks();
     const startTime: number[][] = [];
     const start = Date.now();
 
     setTimeout(() => {
-      promises[2].cancel();
+      taskHandles[2].cancel();
     }, 200);
 
     r.setOptions({
@@ -157,12 +165,12 @@ describe("concurrent runner", () => {
   });
 
   it("can cancel waiting", (done) => {
-    const { r, ret, promises } = getRunnerWithTasks();
+    const { r, ret, taskHandles } = getRunnerWithTasks();
     const startTime: number[][] = [];
     const start = Date.now();
 
     setTimeout(() => {
-      promises[3].cancel();
+      taskHandles[3].cancel();
     }, 200);
 
     r.setOptions({
@@ -181,9 +189,9 @@ describe("concurrent runner", () => {
     r.start();
   });
 
-  function runWithCancel(fn: (...args: any) => Generator, ...args: any[]): { promise: Promise<any>; cancel: Function } {
+  function runWithCancel(fn: (...args: any) => Generator, ...args: any[]): { promise: Promise<any>; cancel: () => void; } {
     const gen = fn(...args);
-    let cancelled: boolean, cancel: Function = function () { };
+    let cancelled: boolean, cancel: () => void = function () { };
     const promise = new Promise((resolve, reject) => {
       cancel = () => {
         cancelled = true;
@@ -243,7 +251,7 @@ describe("concurrent runner", () => {
       },
       time: 1,
     });
-    p.then(
+    p.promise.then(
       (r) => {
         ret.push(r);
       },
@@ -282,5 +290,10 @@ describe("concurrent runner", () => {
     }, 300);
   });
 });
-
 ```
+
+## HISTORY
+
+### 0.2.0 - 2022/02/10
+
+- change CancelablePromise return type to TaskHandle

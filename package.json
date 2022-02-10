@@ -1,7 +1,7 @@
 {
   "name": "concurrent-runner",
   "description": "run cancelable async function concurrently by concurrency and priority using heap",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "files": [
     "lib",
     "es"

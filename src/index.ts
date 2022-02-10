@@ -2,7 +2,7 @@ import {
   Task,
   TaskMeta,
   RunnerOptions,
-  CancelablePromise,
+  TaskHandle,
   ExtractTaskResult,
 } from "./types";
 import { noop, heapify, heapInsert, ConcurrentRunnerAbortError } from "./utils";
@@ -15,7 +15,7 @@ export default class CocurrentRunner<T extends Task> {
   private started = false;
   private paused = false;
 
-  constructor(private options: RunnerOptions<T>) {}
+  constructor(private options: RunnerOptions<T>) { }
 
   setOptions(options: Partial<RunnerOptions<T>>) {
     Object.assign(this.options, options);
@@ -109,7 +109,7 @@ export default class CocurrentRunner<T extends Task> {
 
   public addTask<TT extends T, R = ExtractTaskResult<TT>>(
     task: TT
-  ): CancelablePromise<R> {
+  ): TaskHandle<R> {
     const taskMeta: TaskMeta<TT> = {
       task,
       start: false,
@@ -123,16 +123,16 @@ export default class CocurrentRunner<T extends Task> {
       options: { comparator, onTaskEnd = noop },
     } = this;
 
-    const promise: CancelablePromise<R> = new Promise<R>((resolve, reject) => {
+    const promise = new Promise<R>((resolve, reject) => {
       taskMeta.reject = reject;
       taskMeta.resolve = resolve;
       heapInsert<T>(heap, heap.length, taskMeta, comparator);
       if (this.started) {
         this.checkAndSchedule();
       }
-    }) as CancelablePromise<R>;
+    });
 
-    promise.cancel = () => {
+    const cancel = () => {
       taskMeta.canceled = true;
       if (!taskMeta.end) {
         taskMeta.end = true;
@@ -147,6 +147,6 @@ export default class CocurrentRunner<T extends Task> {
       }
     };
 
-    return promise;
+    return { promise, cancel };
   }
 }
