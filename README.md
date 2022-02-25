@@ -19,7 +19,9 @@ export interface Task<T = any> {
 
 export type ExtractTaskResult<T> = T extends Task<infer U> ? U : never;
 
-// -1 means higher priority
+/**
+ * -1 means higher priority
+ */
 export type Comparator<T extends Task = Task> = (t1: T, t2: T) => -1 | 0 | 1;
 
 export type TaskHandle<T> = {
