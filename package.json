@@ -35,7 +35,7 @@
       "**/*.test.[j|t]s?(x)"
     ]
   },
-  "packageManager": "yarn@3.1.1",
+  "packageManager": "yarn@3.2.2",
   "scripts": {
     "prettier": "prettier --write \"src/**/*.{js,tsx,ts,jsx}\"",
     "pub": "yarn build && npm publish && git push",
